@@ -1,31 +1,135 @@
 (() => {
   const p = window.PROFILE;
   const el = id => document.getElementById(id);
-  const make = (tag, cls, text) => {const node = document.createElement(tag); if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
+  const make = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const externalLink = (text, url, cls) => {
+    const a = make('a', cls, text);
+    a.href = url;
+    if (!url.startsWith('mailto:')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    return a;
+  };
   const dialog = el('resource-dialog');
-  function showDialog(title, description){el('dialog-title').textContent=title;el('dialog-description').textContent=description;dialog.showModal();}
-  for(const key of ['name','role','department','location','updated'])el(key).textContent=p[key];
-  el('location').parentElement.hidden=!p.location;
-  if(!p.interests.length){el('interests').hidden=true;document.querySelector('.profile > .eyebrow').hidden=true;document.querySelector('.side-rule').hidden=true;}
-  for(const section of ['news','service']){if(!p[section].length){el(section).hidden=true;document.querySelectorAll('a[href="#'+section+'"]').forEach(a=>a.hidden=true);}}
-  el('footer-name').textContent=p.name;
-  document.title=p.name+' · Academic Homepage';
-  const brand=document.querySelector('.brand');brand.firstChild.textContent=p.initials;
-  el('avatar').src=p.avatar;el('avatar').alt=p.avatar==='avatar.svg'?p.name+' · initials avatar':p.name;
-  p.contacts.forEach(c=>{const row=make('p');row.append(make('span',null,c.icon));const link=c.url?make('a',null,c.label):make('button',null,c.label);if(c.url){link.href=c.url;link.title=c.url.startsWith('mailto:')?c.url.slice(7):c.url;if(!c.url.startsWith('mailto:')){link.target='_blank';link.rel='noopener noreferrer';}}else{link.type='button';link.onclick=()=>showDialog(c.label+' · 待填写','提供你的 '+c.label+' 地址后，这里会打开对应的联系方式。');}row.append(link);el('contact-links').append(row);});
-  p.interests.forEach(x=>el('interests').append(make('span',null,x)));
-  p.bio.forEach(x=>el('bio').append(make('p',null,x)));
-  p.news.forEach((n,i)=>{const item=make('li');item.hidden=i>=6;item.append(make('span','news-date',n.date));const body=make('span',null,n.text);if(n.tag)body.append(make('span','news-tag',n.tag));item.append(body);el('news-list').append(item);});
-  const toggle=el('news-toggle');toggle.hidden=p.news.length<=6;toggle.onclick=()=>{const expanded=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(expanded));[...el('news-list').children].forEach((n,i)=>n.hidden=i>=6&&!expanded);toggle.textContent=expanded?'Show fewer updates ↑':'Show earlier updates ↓';};
-  function resource(item,key,label){const node=item[key]?make('a',null,label+' ↗'):make('button',null,label+' ↗');if(item[key]){node.href=item[key];node.target='_blank';node.rel='noopener noreferrer';}else{node.type='button';node.onclick=()=>showDialog(label+' · 待填写','这是示例条目。提供真实论文或项目链接后，'+label+' 将打开相应资源。');}return node;}
-  function publications(year){el('publication-list').replaceChildren();p.publications.filter(x=>year==='All'||x.year===year).forEach(item=>{const row=make('article','publication');row.append(make('span','venue',item.venue+' · '+item.year));const content=make('div');content.append(make('h3','pub-title',item.title));const authors=make('p','authors');const parts=item.authors.split(p.authorName||p.name);parts.forEach((part,i)=>{if(i)authors.append(make('strong',null,p.authorName||p.name));authors.append(document.createTextNode(part));});content.append(authors,make('p','pub-summary',item.summary));const links=make('div','pub-links');if(item.paper)links.append(resource(item,'paper','Paper'));if(item.code)links.append(resource(item,'code','Code'));if(item.abstract){const abstract=make('button','abstract-button','Abstract');abstract.type='button';abstract.onclick=()=>showDialog(item.title,item.abstract);links.append(abstract);}if(links.children.length)content.append(links);row.append(content);el('publication-list').append(row);});}
-  ['All',...new Set(p.publications.map(x=>x.year).sort().reverse())].forEach((year,i)=>{const button=make('button',null,year);button.type='button';button.setAttribute('aria-pressed',String(i===0));button.onclick=()=>{document.querySelectorAll('.filters button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));publications(year);};document.querySelector('.filters').append(button);});publications('All');
-  document.querySelector('.filters').hidden=new Set(p.publications.map(x=>x.year)).size<2;
-  p.education.forEach(x=>{const row=make('div','education');row.append(make('time',null,x.dates));const content=make('div');content.append(make('h3',null,x.degree),make('p',null,x.institution),make('p','detail',x.detail));row.append(content);el('education-list').append(row);});
-  p.awards.forEach(x=>{const row=make('li');if(x.year)row.append(make('span','award-year',x.year));else row.classList.add('undated-award');row.append(make('strong',null,x.title),make('span','award-description',x.description));el('awards-list').append(row);});
-  p.service.forEach(x=>el('service-list').append(make('dt',null,x.role),make('dd',null,x.text)));
-  dialog.querySelectorAll('button').forEach(b=>b.onclick=()=>dialog.close());dialog.onclick=e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}};
-  el('back-top').onclick=()=>window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
-  document.querySelectorAll('main section:not([hidden]) .section-number').forEach((n,i)=>n.textContent=String(i+1).padStart(2,'0'));
-  const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting)document.querySelectorAll('.section-nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+entry.target.id));});},{rootMargin:'-10% 0px -65% 0px'});document.querySelectorAll('main section').forEach(s=>observer.observe(s));
+  function showDialog(title, description) {
+    el('dialog-title').textContent = title;
+    el('dialog-description').textContent = description;
+    dialog.showModal();
+  }
+  for (const key of ['name', 'role', 'department', 'location', 'updated']) el(key).textContent = p[key];
+  el('location').parentElement.hidden = !p.location;
+  el('footer-name').textContent = p.name;
+  document.title = p.name + ' · Academic Homepage';
+  el('avatar').src = p.avatar;
+  el('avatar').alt = p.name + "'s avatar";
+  p.contacts.forEach(c => {
+    const row = make('p');
+    const icon = make('span', null, c.icon);
+    icon.setAttribute('aria-hidden', 'true'); row.append(icon);
+    if (c.url) {
+      const a = externalLink(c.label, c.url);
+      a.title = c.url.startsWith('mailto:') ? c.url.slice(7) : c.url;
+      row.append(a);
+    } else if (c.value) {
+      const button = make('button', null, c.label);
+      button.type = 'button'; button.onclick = () => showDialog(c.label, c.value);
+      row.append(button);
+    }
+    el('contact-links').append(row);
+  });
+  p.interests.forEach(text => el('interests').append(make('span', null, text)));
+  p.bio.forEach(text => el('bio').append(make('p', null, text)));
+  el('opportunity').textContent = p.opportunity;
+  p.experience.forEach(item => {
+    const row = make('article', 'experience');
+    const icon = make('span', 'experience-icon', item.icon);
+    icon.setAttribute('aria-hidden', 'true'); row.append(icon);
+    const body = make('div'); const heading = make('div', 'experience-heading');
+    heading.append(make('h3', null, item.institution), make('span', item.status === 'Present' ? 'status present' : 'status', item.status));
+    body.append(heading, make('p', 'experience-role', item.role + (item.advisor ? ' · ' + item.advisor : '')), make('p', 'experience-description', item.description));
+    row.append(body); el('experience-list').append(row);
+  });
+  function renderPublications(year) {
+    el('publication-list').replaceChildren();
+    p.publications.filter(item => year === 'All' || item.year === year).forEach(item => {
+      const row = make('article', 'publication');
+      row.append(make('span', 'venue', item.venue + ' · ' + item.year));
+      const content = make('div'); content.append(make('h3', 'pub-title', item.title));
+      const authors = make('p', 'authors');
+      item.authors.split(p.authorName).forEach((part, i) => {
+        if (i) authors.append(make('strong', null, p.authorName));
+        authors.append(document.createTextNode(part));
+      });
+      content.append(authors, make('p', 'pub-summary', item.summary));
+      const links = make('div', 'pub-links');
+      if (item.paper) links.append(externalLink('Paper ↗', item.paper));
+      if (item.code) links.append(externalLink('Code ↗', item.code));
+      if (item.abstract) {
+        const button = make('button', 'abstract-button', 'Abstract');
+        button.type = 'button'; button.onclick = () => showDialog(item.title, item.abstract);
+        links.append(button);
+      }
+      if (links.children.length) content.append(links);
+      row.append(content); el('publication-list').append(row);
+    });
+  }
+  const years = [...new Set(p.publications.map(item => item.year))].sort().reverse();
+  ['All', ...years].forEach((year, i) => {
+    const button = make('button', null, year);
+    button.type = 'button'; button.setAttribute('aria-pressed', String(i === 0));
+    button.onclick = () => {
+      document.querySelectorAll('.filters button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+      renderPublications(year);
+    };
+    document.querySelector('.filters').append(button);
+  });
+  document.querySelector('.filters').hidden = years.length < 2;
+  renderPublications('All');
+  p.projects.forEach(item => {
+    const row = make('article', 'project'); const title = make('h3');
+    const icon = make('span', 'project-icon', item.icon); icon.setAttribute('aria-hidden', 'true');
+    title.append(icon, externalLink(item.name + ' ↗', item.url));
+    row.append(title, make('p', null, item.description));
+    const badges = make('div', 'project-badges');
+    item.tags.forEach(tag => badges.append(make('span', 'tag', tag)));
+    const stars = externalLink('', item.url + '/stargazers', 'stars');
+    const img = document.createElement('img');
+    img.src = 'https://img.shields.io/github/stars/' + item.repo + '?style=social';
+    img.alt = item.name + ' GitHub stars'; img.width = 80; img.height = 20; img.loading = 'lazy';
+    img.onerror = () => { stars.textContent = '★ View on GitHub'; };
+    stars.append(img); badges.append(stars); row.append(badges);
+    el('project-list').append(row);
+  });
+  const skillSymbols = { Python: '🐍', PyTorch: '🔥', Linux: '🐧', Git: '⑂', 'Computer Vision': '◉', 'Generative Models': '✦' };
+  p.skills.forEach(skill => {
+    const badge = make('span', 'skill-badge'); const symbol = make('span', null, skillSymbols[skill] || '•');
+    symbol.setAttribute('aria-hidden', 'true'); badge.append(symbol, document.createTextNode(skill));
+    el('skill-list').append(badge);
+  });
+  p.education.forEach(item => {
+    const row = make('div', 'education'); row.append(make('time', null, item.dates));
+    const body = make('div'); body.append(make('h3', null, item.degree), make('p', null, item.institution), make('p', 'detail', item.detail));
+    row.append(body); el('education-list').append(row);
+  });
+  p.awards.forEach(item => {
+    const row = make('li'); row.append(make('span', 'award-year', item.year));
+    const body = make('div'); body.append(make('strong', null, item.title), make('span', 'award-description', item.description));
+    row.append(body); el('awards-list').append(row);
+  });
+  dialog.querySelectorAll('button').forEach(button => button.onclick = () => dialog.close());
+  dialog.onclick = event => {
+    if (event.target !== dialog) return;
+    const r = dialog.getBoundingClientRect();
+    if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close();
+  };
+  el('back-top').onclick = () => window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) document.querySelectorAll('.section-nav a').forEach(a => a.classList.toggle('active', a.hash === '#' + entry.target.id));
+    });
+  }, { rootMargin: '-10% 0px -65% 0px' });
+  document.querySelectorAll('main section').forEach(section => observer.observe(section));
 })();
