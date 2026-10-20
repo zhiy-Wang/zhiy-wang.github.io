@@ -60,7 +60,7 @@ window.PROFILE = {
   "education": [
     {
       "dates": "Current",
-      "degree": "B.S. in Artificial Intelligence · Third Year",
+      "degree": "B.Eng. in Artificial Intelligence · Third Year",
       "institution": "Jilin University",
       "detail": "Advisor: Prof. Yaxing Wang"
     }
